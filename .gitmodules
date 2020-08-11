@@ -1,6 +1,6 @@
 [submodule "mooniswap"]
 	path = mooniswap
-	url = git@github.com:CryptoManiacsZone/mooniswap.git
+	url = https://github.com/CryptoManiacsZone/mooniswap.git
 [submodule "lib/ds-test"]
 	path = lib/ds-test
 	url = https://github.com/dapphub/ds-test
