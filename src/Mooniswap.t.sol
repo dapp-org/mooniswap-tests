@@ -27,17 +27,20 @@ contract User {
         DSToken(token).approve(who);
     }
 
-    function deposit(uint256 amount0, uint256 amount1, uint256 minReturn)
+    function deposit(uint256 amount0, uint256 amount1, uint256 minAmount0, uint256 minAmount1)
         external payable returns(uint256 fairSupply)
     {
         uint[] memory amounts = new uint[](2);
+        uint[] memory minAmounts = new uint[](2);
         amounts[0] = amount0;
         amounts[1] = amount1;
+        minAmounts[0] = minAmount0;
+        minAmounts[1] = minAmount1;
         // handle ETH
         if (address(pair.tokens(0)) == address(0)) {
-            return pair.deposit{value: amount0}(amounts, minReturn);
+            return pair.deposit{value: amount0}(amounts, minAmounts);
         } else {
-            return pair.deposit(amounts, minReturn);
+            return pair.deposit(amounts, minAmounts);
         }
     }
 
@@ -118,7 +121,7 @@ contract MooniswapTest is DSTest, DSMath {
         uint userBal1 = token1.balanceOf(address(userA));
         uint fairSupply = max(99000, max(amt0, amt1));
 
-        uint actual = userA.deposit(amt0, amt1, fairSupply);
+        uint actual = userA.deposit(amt0, amt1, 0, 0);
 
         // the user has received the correct amount of LP shares
         assertEq(actual, fairSupply);
@@ -171,7 +174,7 @@ contract MooniswapTest is DSTest, DSMath {
         // Therefore we finish the test early if this is the case
         if (fairSupply == 0) { return; }
 
-        uint actual = userA.deposit(amt0, amt1, 0);
+        uint actual = userA.deposit(amt0, amt1, 0, 0);
 
         // totalSupply is correct
         assertEq(pair.totalSupply(), totalSupply + fairSupply);
@@ -251,7 +254,7 @@ contract MooniswapTest is DSTest, DSMath {
       uint thd1 = token1.balanceOf(address(pair)) * thd0 / token0.balanceOf(address(pair));
       if (thd1 == 0) return;
 
-      userC.deposit(thd0, thd1,0);
+      userC.deposit(thd0, thd1, 0, 0);
 
       uint post0bal = token0.balanceOf(address(userC));
       uint post1bal = token1.balanceOf(address(userC));
@@ -262,12 +265,12 @@ contract MooniswapTest is DSTest, DSMath {
 
     // some concrete values so we can get a gas read
     function testDepositSpecific() public {
-      userA.deposit(123,123,0);
+      userA.deposit(123,123,0,0);
     }
 
     // some concrete values so we can get a gas read
     function testSwapSpecific() public {
-      userA.deposit(123,123,0);
+      userA.deposit(123,123,0,0);
       userB.swap(token0, token1, 10);
     }
 
@@ -296,7 +299,7 @@ contract MooniswapTest is DSTest, DSMath {
 
         // make a deposit
         (vbAdd0Pre, vbAdd1Pre, vbRem0Pre, vbRem1Pre) = getVirtualBalances();
-        userA.deposit(uint56(newRand()), uint64(newRand()), 0);
+        userA.deposit(uint56(newRand()), uint64(newRand()), 0, 0);
         assertVirtualBalanceScaling(vbAdd0Pre, vbAdd1Pre, vbRem0Pre, vbRem1Pre);
     }
 
@@ -360,7 +363,7 @@ contract MooniswapTest is DSTest, DSMath {
         uint userBal0 = token0.balanceOf(address(userA));
         uint userBal1 = token1.balanceOf(address(userA));
 
-        uint liquidity = userA.deposit(amt0, amt1, 0);
+        uint liquidity = userA.deposit(amt0, amt1, 0, 0);
 
         // deposited amounts are at the exchange
         assertEq(amt0, token0.balanceOf(address(pair)));
@@ -397,14 +400,14 @@ contract MooniswapTest is DSTest, DSMath {
         // skip the whole test if any value is zero
         if (amt0 == 0 || amt1 == 0  || amt3 == 0 || amt4 == 0) return;
 
-        userA.deposit(amt0, amt1, 0);
+        userA.deposit(amt0, amt1, 0, 0);
 
         // user balances before deposit
         uint userBal0 = token0.balanceOf(address(userB));
         uint userBal1 = token1.balanceOf(address(userB));
 
         // perform deposit and immediate withdrawal
-        uint liquidity = userB.deposit(amt3, amt4, 0);
+        uint liquidity = userB.deposit(amt3, amt4, 0, 0);
         userB.withdraw(liquidity, 0, 0);
 
         // funds withdrawn are not always equal to funds deposited,
@@ -426,14 +429,14 @@ contract MooniswapTest is DSTest, DSMath {
         // skip the whole test if any value is zero
         if (amt0 == 0 || amt1 == 0) return;
 
-        userA.deposit(amt0, amt1, 0); // initializing deposit
+        userA.deposit(amt0, amt1, 0,0 ); // initializing deposit
 
         // user balances before deposit
         uint userBal0 = token0.balanceOf(address(userB));
         uint userBal1 = token1.balanceOf(address(userB));
 
         // deposit and withdraw in stages
-        uint liquidity = userB.deposit(amt0, amt1, 0);
+        uint liquidity = userB.deposit(amt0, amt1, 0, 0);
         if (liquidity < 200000) return;
         userB.withdraw(liquidity-200000, 0, 0);
         userB.withdraw(50000, 0, 0);
@@ -501,7 +504,7 @@ contract MooniswapTest is DSTest, DSMath {
       uint C_0bal_pre = token0.balanceOf(address(userC));
       uint C_1bal_pre = token1.balanceOf(address(userC));
       
-      userA.deposit(1000, 1000,0);
+      userA.deposit(1000, 1000, 0, 0);
 
       userB.swapReferall(token0, token1, 1e9, address(userC));
 
@@ -619,7 +622,7 @@ contract MooniswapTest is DSTest, DSMath {
         uint qty1 = rand1 / 10;
 
         // initial deposit
-        userA.deposit(rand0, rand0 * initPrice, 0);
+        userA.deposit(rand0, rand0 * initPrice, 0, 0);
 
         // swap: sell price < 300
         uint return0 = userB.swap(token0, token1, qty0);
@@ -630,7 +633,7 @@ contract MooniswapTest is DSTest, DSMath {
         assertEq(price(return1, qty0), initPrice);
 
         // deposit
-        uint liqA = userA.deposit(rand1, rand1 * initPrice, 0);
+        uint liqA = userA.deposit(rand1, rand1 * initPrice, 0, 0);
 
         // swap: buy price == 300
         uint return2 = userC.swap(token1, token0, qty1);
@@ -676,8 +679,8 @@ contract MooniswapTest is DSTest, DSMath {
         randomSeed = seed;
 
         // add liquidity and ensure timestamps have all been set
-        userA.deposit(uint88(newRand()), uint88(newRand()), 0);
-        userA.deposit(uint88(newRand()), uint88(newRand()), 0);
+        userA.deposit(uint88(newRand()), uint88(newRand()), 0, 0);
+        userA.deposit(uint88(newRand()), uint88(newRand()), 0, 0);
 
         // enable the fee
         factory.setFee(factory.MAX_FEE());
@@ -765,7 +768,7 @@ contract MooniswapTest is DSTest, DSMath {
 
         uint amt0 = uint64(newRand());
         uint amt1 = uint64(newRand());
-        uint sharesA = userA.deposit(amt0, amt1, 0);
+        uint sharesA = userA.deposit(amt0, amt1, 0, 0);
 
         factory.setFee(factory.MAX_FEE());
 
@@ -779,7 +782,7 @@ contract MooniswapTest is DSTest, DSMath {
         uint pairBalEth = address(pair).balance;
         uint pairBalTok = token.balanceOf(address(pair));
 
-        uint sharesB = userB.deposit(amt0, amt1, 0);
+        uint sharesB = userB.deposit(amt0, amt1, 0, 0);
 
         assertTrue(address(pair).balance - pairBalEth <= amt0);
         assertTrue(token.balanceOf(address(pair)) - pairBalTok <= amt1);
